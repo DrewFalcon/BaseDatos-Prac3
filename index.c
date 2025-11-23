@@ -1,4 +1,6 @@
 #include "index.h"
+#include "deleted.h"
+#include "record.h"
 
 // Crea un índice vacío
 Index* index_create() {
@@ -43,18 +45,19 @@ int index_find(Index *idx, int key) {
 
     middle = (idx->count / 2);
 
-    while(loop == 0)
+    while(middle <= idx->count && middle > 0)
     {
-        if (middle == idx->count || middle == 0)
+        /*if (middle == idx->count || middle == 0)
         {
             loop = 1;
             fprintf(stdout, "Record with bookId=%i does not exist", key);
-        }
-        else if (idx->array[middle].key == key )
+        }*/
+        if (idx->array[middle].key == key )
         {
             /*prindInd(parametro1, parametro2)*/
             fprintf(stdout, "%i|Isbn_I_dont_know_how_to_get|Name_I_dont_know_how_to_get|mark_I_do_not_know_how_to_get", key);
             loop = 1;
+            return middle;
         }
         else if (idx->array[middle].key < key)
         {
@@ -77,7 +80,7 @@ int index_find(Index *idx, int key) {
 
 
 
-    return -1;
+    return -2;
 }
 
 void index_load(Index *idx, const char *filename) {
@@ -107,17 +110,43 @@ void index_save(Index *idx, const char *filename) {
 
 
 
-
-void printInd(indexbook AAA){
-    fprintf(stdout, "Entry #X\n");
-    fprintf(stdout, "   key: #%i", AAA.key);
-    fprintf(stdout, "   offset: #%i", AAA.offset);
-    fprintf(stdout, "   size: #%i", AAA.size);
+/* Imprime el contenido del Índice tal y como está ordenado en memoria.*/
+void printInd(Index lstInd){
+    int i = 0;
+    for (i = 0; i < lstInd.count; i++)
+    {
+        fprintf(stdout, "Entry #%i\n", i+1);
+        fprintf(stdout, "   key: #%i", lstInd.array[i].key);
+        fprintf(stdout, "   offset: #%i", lstInd.array[i].offset);
+        fprintf(stdout, "   size: #%i", lstInd.array[i].size);
+    }
 }
 
-void printLst(indexbook lstBORRADOS){
-    
+
+void printLst(DeletedList *lst) {
+    int i;
+    for (i = 0; i < lst->count; i++) {
+        printf("Entry #%d\n", i+1);
+        printf("   offset: #%ld\n", lst->array[i].offset);
+        printf("   size: #%zu\n", lst->array[i].size);
+    }
 }
 
-void printRec(indexbook lstAAAAA){
+
+
+/*Imprime el contenido del fichero que contiene los libros siguiendo el orden 
+  marcado por el Índice e ignorando los registros borrados. */
+void printRec(Index lstRec, FILE *data_file){
+    /*BookID | ISBN | Titulo | Editorial*/
+    for (int i = 0; i < lstRec.count; i++) {
+        /* Leer registro del archivo usando el offset del índice*/
+        BookRecord *rec = record_read(data_file, lstRec.array[i].offset);
+        if (rec != NULL) {
+            printf("%d|%s|%s|%s\n", rec->bookID, rec->isbn, rec->title, rec->printedBy);
+            free(rec); // Liberar memoria
+        }
+    }
 }
+
+
+
