@@ -2,10 +2,13 @@
 #define UTILS_H
 
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+
+#define MAX_STRING 256
+
+typedef enum { OK, ERROR } Status;
 
 char* read_line();
-void split_record(char *input, BookRecord *rec);
 
 #endif
