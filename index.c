@@ -136,14 +136,14 @@ void printLst(DeletedList *lst) {
 
 /*Imprime el contenido del fichero que contiene los libros siguiendo el orden 
   marcado por el Índice e ignorando los registros borrados. */
-void printRec(Index lstRec, FILE *data_file){
+void printRec(Index* lstRec, FILE *data_file){
     /*BookID | ISBN | Titulo | Editorial*/
-    for (int i = 0; i < lstRec.count; i++) {
+    for (int i = 0; i < lstRec->count; i++) {
         /* Leer registro del archivo usando el offset del índice*/
-        BookRecord *rec = record_read(data_file, lstRec.array[i].offset);
+        BookRecord *rec = record_read(data_file, lstRec->array[i].offset);
         if (rec != NULL) {
             printf("%d|%s|%s|%s\n", rec->bookID, rec->isbn, rec->title, rec->printedBy);
-            free(rec); // Liberar memoria
+            free(rec); /* Liberar memoria*/
         }
     }
 }
