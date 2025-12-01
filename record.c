@@ -4,9 +4,10 @@
 size_t record_compute_size(BookRecord* rec) {
         return sizeof(int)               /* bookID */
                + 16                      /* ISBN: EXACTAMENTE 16 bytes */
-               + strlen(rec->title) + 1  /* title + '|' */
+               + strlen(rec->title)      /* title + '|' */
                + strlen(rec->printedBy); /* printedBy SIN '|' */
 }
+
 Status record_write(FILE* f, BookRecord* rec) {
         if (!f || !rec) return ERROR;
 
@@ -21,9 +22,8 @@ Status record_write(FILE* f, BookRecord* rec) {
         /* ISBN: EXACTAMENTE 16 bytes */
         if (fwrite(rec->isbn, 1, 16, f) != 16) return ERROR;
 
-        /* title + '|' */
+        /* title */
         if (fwrite(rec->title, 1, strlen(rec->title), f) != strlen(rec->title)) return ERROR;
-        if (fwrite("|", 1, 1, f) != 1) return ERROR;
 
         /* printedBy (sin '|') */
         if (fwrite(rec->printedBy, 1, strlen(rec->printedBy), f) != strlen(rec->printedBy)) return ERROR;

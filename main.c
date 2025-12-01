@@ -11,11 +11,10 @@
 #define MAX_PRINTED_BY 1000
 #define MAX_TITLE 1000
 /* Private Functions */
-Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments, int strategy);
-Status find(FILE* db, Index* index, char* arguments);
+Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments);
 Status del(FILE* db, Index* index, DeletedList* deleted, char* arguments);
-Status printInd(Index* index);
-Status printRec(FILE* db, Index* index);
+Status printInd(Index* lstInd);
+Status printRec(Index* lstRec, FILE* data_file);
 Status printLst(DeletedList* deleted);
 
 /* Auxiliary functions */
@@ -89,7 +88,7 @@ int main(int argc, char** argv) {
                 }
 
                 if (strcmp(cmd, "add") == 0) {
-                        add(db, index, deleted, args, strategy);
+                        add(db, index, deleted, args);
                         free(line);
                         continue;
                 }
@@ -107,7 +106,7 @@ int main(int argc, char** argv) {
                 }
 
                 if (strcmp(cmd, "printRec") == 0) {
-                        printRec(db, index);
+                        printRec(index, db);
                         free(line);
                         continue;
                 }
@@ -140,12 +139,13 @@ int main(int argc, char** argv) {
 }
 
 /* Empty implementations */
-Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments, int strategy) {
+Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments) {
         BookRecord* rec = NULL;
         char* token = NULL;
         size_t tlen = 0;
         size_t size = 0;
         long int offset = 0;
+        char* book_id_aux = NULL;
 
         if (!arguments) {
                 printf("Uso correcto: add bookID|ISBN|Title|Printed_by\n");
@@ -163,6 +163,7 @@ Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments, int st
 
         /* Parsear argumentos */
         token = strtok(arguments, "|");
+        book_id_aux = token;
         if (!token) {
                 printf("Formato inválido\n");
                 free(rec);
@@ -183,16 +184,21 @@ Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments, int st
                 tlen = 16;
         }
         memcpy(rec->isbn, token, tlen);
+        printf("1ISBN guardado: %s\n", rec->isbn);
 
         token = strtok(NULL, "|");
+        printf("Token leido para el titulo: %s\n", token);
         if (!token) {
                 printf("Formato inválido\n");
                 free(rec);
                 return ERROR;
         }
         strcpy(rec->title, token);
+        strcat(rec->title, "|");
+        printf("Titulo puesto %s\n", rec->title);
+        printf("2ISBN guardado: %s\n", rec->isbn);
 
-        token = strtok(NULL, "");
+        token = strtok(NULL, "\0");
         if (!token) {
                 printf("Formato inválido\n");
                 free(rec);
@@ -202,19 +208,20 @@ Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments, int st
         rec->printedBy[MAX_PRINTED_BY - 1] = '\0';
 
         /* 1) comprobar duplicado */
-        if (index_find(index, rec->bookID) != -1) {
+        if (find(db, index, book_id_aux) != -1) {
                 printf("Record with BookID=%d exists.\n", rec->bookID);
                 free(rec);
                 return ERROR;
         }
 
         /* 2) calcular tamaño correcto */
-        size = record_compute_size(rec); /* <-- PASAR rec, no &rec */
+        size = record_compute_size(rec);
 
         /* 3) buscar hueco */
         offset = deleted_find_fit(deleted, size);
 
         /* 4) si no hay hueco, append al final */
+
         if (offset < 0) {
                 if (fseek(db, 0, SEEK_END) != 0) {
                         printf("fseek failed\n");
@@ -228,7 +235,6 @@ Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments, int st
                         return ERROR;
                 }
         } else {
-                /* deleted_find_fit ya actualizó la lista (eliminó o redujo el hueco) */
                 if (fseek(db, offset, SEEK_SET) != 0) {
                         printf("fseek failed\n");
                         free(rec);
@@ -248,12 +254,12 @@ Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments, int st
         index_insert(index, rec->bookID, offset, size);
 
         printf("Record with BookID=%d has been added to the database\n", rec->bookID);
-
+        printf("Datos añadidos: BookID: %d, ISBN: %s, Titulo: %s, Editorial: %s", rec->bookID, rec->isbn, rec->title,
+               rec->printedBy);
         free(rec);
         return OK;
 }
 
-Status find(FILE* db, Index* index, char* arguments) { return OK; }
 Status del(FILE* db, Index* index, DeletedList* deleted, char* arguments) {
         int bookID = 0;
         int found_index = 0;
@@ -264,18 +270,67 @@ Status del(FILE* db, Index* index, DeletedList* deleted, char* arguments) {
         /* Parsear argumentos */
         bookID = atoi(arguments);
 
-        found_index = index_find(index, bookID);
+        found_index = find(db, index, arguments);
         if (found_index == -1) {
                 printf("Record with bookId=%i does not exist", bookID);
                 return ERROR;
         } else {
                 deleted_insert(deleted, index->array[found_index].size, index->array[found_index].offset);
-                index_delete(index, bookID);
+                index_delete(db, index, bookID);
                 printf("Record with bookId=%i has been deleted", bookID);
         }
 
         return OK;
 }
-Status printInd(Index* index) { return OK; }
-Status printRec(FILE* db, Index* index) { return OK; }
-Status printLst(DeletedList* deleted) { return OK; }
+
+/* Imprime el contenido del Índice tal y como está ordenado en memoria.*/
+Status printInd(Index* lstInd) {
+        int i = 0;
+
+        if (!lstInd) {
+                return ERROR;
+        }
+
+        for (i = 0; i < lstInd->count; i++) {
+                fprintf(stdout, "Entry #%i\n", i + 1);
+                fprintf(stdout, "   key: #%i\n", lstInd->array[i].key);
+                fprintf(stdout, "   offset: #%li\n", lstInd->array[i].offset);
+                fprintf(stdout, "   size: #%zu\n", lstInd->array[i].size);
+        }
+
+        return OK;
+}
+
+Status printLst(DeletedList* lst) {
+        int i;
+
+        if (!lst) {
+                return ERROR;
+        }
+
+        for (i = 0; i < lst->count; i++) {
+                printf("Entry #%d\n", i + 1);
+                printf("   offset: #%ld\n", lst->array[i].offset);
+                printf("   size: #%zu\n", lst->array[i].size);
+        }
+        return OK;
+}
+
+/*Imprime el contenido del fichero que contiene los libros siguiendo el orden
+  marcado por el Índice e ignorando los registros borrados. */
+Status printRec(Index* lstRec, FILE* data_file) {
+        if (!lstRec || !data_file) {
+                return ERROR;
+        }
+        /*BookID | ISBN | Titulo | Editorial*/
+        for (int i = 0; i < lstRec->count; i++) {
+                /* Leer registro del archivo usando el offset del índice*/
+                BookRecord* rec = record_read(data_file, lstRec->array[i].offset);
+                if (rec != NULL) {
+                        printf("%d|%s|%s|%s\n", rec->bookID, rec->isbn, rec->title, rec->printedBy);
+                        free(rec); /* Liberar memoria*/
+                }
+        }
+
+        return OK;
+}
