@@ -9,7 +9,7 @@
 // Estructura interna del libro
 typedef struct {
         int bookID;
-        char isbn[16];
+        char isbn[17];
         char title[128];
         char printedBy[128];
 } BookRecord;

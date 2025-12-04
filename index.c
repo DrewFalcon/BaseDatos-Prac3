@@ -48,61 +48,54 @@ void index_save(Index* idx, const char* filename) {
         fclose(f);
 }
 
-int find(FILE* db, Index* idx, char* arguments) {
-        /*for (int i = 0; i < idx->count; i++) {
-            if (idx->array[i].key == key)
-                return i;
-        }*/
-
-        int middle;
-        BookRecord* rec = NULL;
-        int key = atoi(arguments);
-
-        if (idx == NULL) {
-                fprintf(stdout, "Record with bookId=%i does not exist", key);
-                return -1;
-        }
-
-        middle = (idx->count / 2);
-
-        while (middle <= idx->count && middle > 0) {
-                if (idx->array[middle].key == key) {
-                        /*Si hemos encontrado el libro a imprimir*/
-                        rec = record_read(db, idx->array[middle].offset);
-                        printf("%d|%s|%s|%s\n", rec->bookID, rec->isbn, rec->title, rec->printedBy);
-                        return middle;
-                } else if (idx->array[middle].key < key) {
-                        middle = (middle + idx->count) / 2;
-                } else {
-                        middle = (0 + middle) / 2;
-                }
-        }
-
-        return -2;
-}
-
-Status index_delete(FILE* db, Index* idx, int key) {
+Status index_delete(Index* idx, int key) {
         int pos = 0;
-        char* string_key = NULL;
+
         if (!idx) {
                 return ERROR;
         }
 
-        sprintf(string_key, "%d", key);
-
-        pos = find(db, idx, string_key);
+        pos = index_find(idx, key);
         if (pos == -1) {
                 return ERROR;
-        }
-
-        /* Mover todos los elementos a la izquierda desde pos+1 hasta el final */
+        } /* Mover todos los elementos a la izquierda desde pos+1 hasta el final */
         if (pos < idx->count - 1) {
-                memmove(&idx->array[pos],     /* destino */
-                        &idx->array[pos + 1], /* origen */
-                        (idx->count - pos - 1) * sizeof(indexbook));
+                memmove(&idx->array[pos], /* destino */ &idx->array[pos + 1],
+                        /* origen */ (idx->count - pos - 1) * sizeof(indexbook));
+        }
+        idx->count--; /* reducir el número de entradas */
+        return OK;
+}
+
+int index_find(Index* idx, int key) {
+        int low = 0;
+        int high = idx->count - 1;
+
+        while (low <= high) {
+                int mid = (low + high) / 2;
+
+                if (idx->array[mid].key == key) return mid;
+
+                if (idx->array[mid].key < key)
+                        low = mid + 1;
+                else
+                        high = mid - 1;
         }
 
-        idx->count--; /* reducir el número de entradas */
+        return -1;
+}
 
-        return OK;
+/*Este es la logica para imprimir el resultado de Find*/
+void index_print(Index* idx, FILE* db, int key, int pos) {
+        BookRecord* rec = NULL;
+
+        if (idx != NULL && (idx->array) != NULL && pos >= 0 && pos <= idx->count) {
+                rec = record_read(db, idx->array[pos].offset);
+                if (rec != NULL && pos >= 0) {
+                        fprintf(stdout, "%i|%s|%s%s\n", rec->bookID, rec->isbn, rec->title, rec->printedBy);
+                        free(rec);
+                }
+        }
+
+        return;
 }

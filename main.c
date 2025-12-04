@@ -13,6 +13,7 @@
 /* Private Functions */
 Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments);
 Status del(FILE* db, Index* index, DeletedList* deleted, char* arguments);
+Status find(FILE* db, Index* index, char* arguments);
 Status printInd(Index* lstInd);
 Status printRec(Index* lstRec, FILE* data_file);
 Status printLst(DeletedList* deleted);
@@ -145,8 +146,6 @@ Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments) {
         size_t tlen = 0;
         size_t size = 0;
         long int offset = 0;
-        char* book_id_aux = NULL;
-
         if (!arguments) {
                 printf("Uso correcto: add bookID|ISBN|Title|Printed_by\n");
                 return ERROR;
@@ -163,7 +162,6 @@ Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments) {
 
         /* Parsear argumentos */
         token = strtok(arguments, "|");
-        book_id_aux = token;
         if (!token) {
                 printf("Formato inválido\n");
                 free(rec);
@@ -184,10 +182,11 @@ Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments) {
                 tlen = 16;
         }
         memcpy(rec->isbn, token, tlen);
-        printf("1ISBN guardado: %s\n", rec->isbn);
+        strcat(rec->isbn, "\0");
+        /*printf("1ISBN guardado: %s\n", rec->isbn);*/
 
         token = strtok(NULL, "|");
-        printf("Token leido para el titulo: %s\n", token);
+        /*printf("Token leido para el titulo: %s\n", token);*/
         if (!token) {
                 printf("Formato inválido\n");
                 free(rec);
@@ -195,8 +194,8 @@ Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments) {
         }
         strcpy(rec->title, token);
         strcat(rec->title, "|");
-        printf("Titulo puesto %s\n", rec->title);
-        printf("2ISBN guardado: %s\n", rec->isbn);
+        /*printf("Titulo puesto %s\n", rec->title);
+        printf("2ISBN guardado: %s\n", rec->isbn);*/
 
         token = strtok(NULL, "\0");
         if (!token) {
@@ -208,7 +207,7 @@ Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments) {
         rec->printedBy[MAX_PRINTED_BY - 1] = '\0';
 
         /* 1) comprobar duplicado */
-        if (find(db, index, book_id_aux) != -1) {
+        if (index_find(index, rec->bookID) >= 0) {
                 printf("Record with BookID=%d exists.\n", rec->bookID);
                 free(rec);
                 return ERROR;
@@ -254,8 +253,8 @@ Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments) {
         index_insert(index, rec->bookID, offset, size);
 
         printf("Record with BookID=%d has been added to the database\n", rec->bookID);
-        printf("Datos añadidos: BookID: %d, ISBN: %s, Titulo: %s, Editorial: %s", rec->bookID, rec->isbn, rec->title,
-               rec->printedBy);
+        /*printf("Datos añadidos: BookID: %d, ISBN: %s, Titulo: %s, Editorial: %s", rec->bookID, rec->isbn, rec->title,
+               rec->printedBy);*/
         free(rec);
         return OK;
 }
@@ -270,15 +269,29 @@ Status del(FILE* db, Index* index, DeletedList* deleted, char* arguments) {
         /* Parsear argumentos */
         bookID = atoi(arguments);
 
-        found_index = find(db, index, arguments);
-        if (found_index == -1) {
-                printf("Record with bookId=%i does not exist", bookID);
+        found_index = index_find(index, atoi(arguments));
+        if (found_index <= -1) {
+                printf("Record with bookId=%i does not exist\n", bookID);
                 return ERROR;
         } else {
                 deleted_insert(deleted, index->array[found_index].size, index->array[found_index].offset);
-                index_delete(db, index, bookID);
-                printf("Record with bookId=%i has been deleted", bookID);
+                index_delete(index, bookID);
+                printf("Record with bookId=%i has been deleted\n", bookID);
         }
+
+        return OK;
+}
+
+Status find(FILE* db, Index* index, char* arguments) {
+        int found_index = 0;
+
+        if (db == NULL || index == NULL || arguments == NULL) {
+                return ERROR;
+        }
+
+        found_index = index_find(index, atoi(arguments));
+
+        index_print(index, db, atoi(arguments), found_index);
 
         return OK;
 }

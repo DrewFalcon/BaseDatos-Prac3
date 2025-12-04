@@ -26,7 +26,8 @@ void index_free(Index* idx);
 void index_insert(Index* idx, int key, long int offset, size_t size);
 void index_load(Index* idx, const char* filename);
 void index_save(Index* idx, const char* filename);
-int find(FILE* db, Index* idx, char* arguments);
-Status index_delete(FILE* db, Index* idx, int key);
+int index_find(Index* idx, int key);
+void index_print(Index* idx, FILE* db, int key, int pos);
+Status index_delete(Index* idx, int key);
 
 #endif
