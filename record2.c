@@ -33,31 +33,30 @@ Status record_write(FILE* f, BookRecord* rec) {
 
 BookRecord* record_read(FILE* f, long int offset) {
         if (!f) return NULL;
-        fseek(f, offset, SEEK_SET);
+        if (fseek(f, offset, SEEK_SET) != 0) return NULL;
 
         size_t size;
-        fread(&size, sizeof(size_t), 1, f);
+        if (fread(&size, sizeof(size_t), 1, f) != 1) return NULL;
 
         BookRecord* rec = malloc(sizeof(BookRecord));
-        fread(&rec->bookID, sizeof(int), 1, f);
+        if (!rec) return NULL;
 
+        /* read fixed-size fields */
+        if (fread(&rec->bookID, sizeof(int), 1, f) != 1) {
+                free(rec);
+                return NULL;
+        }
+        if (fread(rec->isbn, 1, 16, f) != 16) {
+                free(rec);
+                return NULL;
+        }
 
-
-
-
-
-        fread(rec->isbn, 1, 16, f);
-
-
-
-
-        /*fgets(rec->title, 129, f);
-        fgets(rec->printedBy, 129, f);*/
+        /* remaining bytes correspond to title (including a trailing '|') + printedBy */
         size_t remaining = 0;
         if (size > (sizeof(int) + 16))
                 remaining = size - (sizeof(int) + 16);
 
-
+        /* read the concatenated variable part into a temporary buffer */
         char* buf = NULL;
         if (remaining > 0) {
                 buf = malloc(remaining + 1);
@@ -72,11 +71,10 @@ BookRecord* record_read(FILE* f, long int offset) {
                 }
                 buf[remaining] = '\0';
 
-
+                /* split at the first '|' which delimits title and printedBy */
                 char* delim = strchr(buf, '|');
                 if (delim) {
-                        size_t title_len = (size_t)(delim - buf + 1);
-                
+                        size_t title_len = (size_t)(delim - buf + 1); /* include '|' */
                         if (title_len >= sizeof(rec->title))
                                 title_len = sizeof(rec->title) - 1;
                         memcpy(rec->title, buf, title_len);
@@ -98,10 +96,11 @@ BookRecord* record_read(FILE* f, long int offset) {
                         rec->printedBy[0] = '\0';
                 }
                 free(buf);
-        } /*else {
-                 no variable part 
+        } else {
+                /* no variable part */
                 rec->title[0] = '\0';
                 rec->printedBy[0] = '\0';
-        }*/
+        }
+
         return rec;
 }
