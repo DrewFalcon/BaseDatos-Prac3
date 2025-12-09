@@ -94,6 +94,8 @@ void index_print(Index* idx, FILE* db, int key, int pos) {
                 if (rec != NULL && pos >= 0) {
                         fprintf(stdout, "%i|%s|%s%s\n", rec->bookID, rec->isbn, rec->title, rec->printedBy);
                         free(rec);
+                }else{
+                        fprintf(stdout, "Record with bookId=%i does not exist", key);
                 }
         }
 

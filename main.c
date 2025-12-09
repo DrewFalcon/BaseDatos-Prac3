@@ -203,8 +203,9 @@ Status add(FILE* db, Index* index, DeletedList* deleted, char* arguments) {
                 free(rec);
                 return ERROR;
         }
-        strncpy(rec->printedBy, token, MAX_PRINTED_BY - 1);
-        rec->printedBy[MAX_PRINTED_BY - 1] = '\0';
+        /*Im modifying this ONLY TEMPORARILY:*/
+        strncpy(rec->printedBy, token, 128 - 1);
+        rec->printedBy[128 - 1] = '\0';
 
         /* 1) comprobar duplicado */
         if (index_find(index, rec->bookID) >= 0) {
@@ -340,7 +341,7 @@ Status printRec(Index* lstRec, FILE* data_file) {
                 /* Leer registro del archivo usando el offset del índice*/
                 BookRecord* rec = record_read(data_file, lstRec->array[i].offset);
                 if (rec != NULL) {
-                        printf("%d|%s|%s|%s\n", rec->bookID, rec->isbn, rec->title, rec->printedBy);
+                        printf("%d|%s|%s%s\n", rec->bookID, rec->isbn, rec->title, rec->printedBy);
                         free(rec); /* Liberar memoria*/
                 }
         }
