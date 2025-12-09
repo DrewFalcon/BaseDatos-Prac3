@@ -31,15 +31,15 @@ int main(int argc, char** argv) {
 
         /* Argument checking */
         if (argc < 3) {
-                printf("Usage: %s <bestfit|firstfit|worstfit> <basename>\n", argv[0]);
+                printf("Usage: %s <best_fit|first_fit|worst_fit> <basename>\n", argv[0]);
                 return -1;
         }
 
-        if (strcmp(argv[1], "bestfit") == 0)
+        if (strcmp(argv[1], "best_fit") == 0)
                 strategy = BESTFIT;
-        else if (strcmp(argv[1], "firstfit") == 0)
+        else if (strcmp(argv[1], "first_fit") == 0)
                 strategy = FIRSTFIT;
-        else if (strcmp(argv[1], "worstfit") == 0)
+        else if (strcmp(argv[1], "worst_fit") == 0)
                 strategy = WORSTFIT;
         else {
                 printf("Unknown search strategy %s\n", argv[1]);
@@ -68,10 +68,18 @@ int main(int argc, char** argv) {
         deleted = deleted_create(strategy);
         deleted_load(deleted, lst_filename);
 
-        printf("Library ready. Enter commands:\n");
+        /*TEMPORARY CHANGE IN INTERFACE*/
+        /*printf("Library ready. Enter commands:\n");*/
+        printf("Type command and argument/s.\n");
 
         while (1) {
-                printf("> ");
+                /*TEMPORARY CHANGE IN INTERFACE*/
+                /*printf("> ");*/
+
+                fprintf(stdout, "exit");
+                /*fflush(stdout);*/
+
+
                 char* line = read_line();
                 if (!line) break;
 
@@ -90,37 +98,42 @@ int main(int argc, char** argv) {
 
                 if (strcmp(cmd, "add") == 0) {
                         add(db, index, deleted, args);
+                        //printf("exit\n");
                         free(line);
                         continue;
                 }
 
                 if (strcmp(cmd, "find") == 0) {
                         find(db, index, args);
+                        //printf("exit\n");
                         free(line);
                         continue;
                 }
 
                 if (strcmp(cmd, "del") == 0) {
                         del(db, index, deleted, args);
+                        //printf("exit\n");
                         free(line);
                         continue;
                 }
 
                 if (strcmp(cmd, "printRec") == 0) {
                         printRec(index, db);
+                        //printf("exit\n");
                         free(line);
                         continue;
                 }
 
                 if (strcmp(cmd, "printInd") == 0) {
                         printInd(index);
+                        //printf("exit\n");
                         free(line);
                         continue;
                 }
 
                 if (strcmp(cmd, "printLst") == 0) {
                         printLst(deleted);
-                        free(line);
+                        //free(line);
                         continue;
                 }
 
@@ -291,7 +304,6 @@ Status find(FILE* db, Index* index, char* arguments) {
         }
 
         found_index = index_find(index, atoi(arguments));
-
         index_print(index, db, atoi(arguments), found_index);
 
         return OK;
@@ -306,10 +318,10 @@ Status printInd(Index* lstInd) {
         }
 
         for (i = 0; i < lstInd->count; i++) {
-                fprintf(stdout, "Entry #%i\n", i + 1);
-                fprintf(stdout, "   key: #%i\n", lstInd->array[i].key);
-                fprintf(stdout, "   offset: #%li\n", lstInd->array[i].offset);
-                fprintf(stdout, "   size: #%zu\n", lstInd->array[i].size);
+                fprintf(stdout, "Entry #%i\n", i);
+                fprintf(stdout, "    key: #%i\n", lstInd->array[i].key);
+                fprintf(stdout, "    offset: #%li\n", lstInd->array[i].offset);
+                fprintf(stdout, "    size: #%zu\n", lstInd->array[i].size);
         }
 
         return OK;
@@ -323,9 +335,9 @@ Status printLst(DeletedList* lst) {
         }
 
         for (i = 0; i < lst->count; i++) {
-                printf("Entry #%d\n", i + 1);
-                printf("   offset: #%ld\n", lst->array[i].offset);
-                printf("   size: #%zu\n", lst->array[i].size);
+                printf("Entry #%i\n", i );
+                printf("    offset: #%ld\n", lst->array[i].offset);
+                printf("    size: #%zu\n", lst->array[i].size);
         }
         return OK;
 }

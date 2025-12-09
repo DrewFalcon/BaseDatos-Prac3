@@ -15,14 +15,32 @@ void index_free(Index* idx) {
 }
 
 void index_insert(Index* idx, int key, long int offset, size_t size) {
+        int i = 0;
         if (idx->count >= idx->capacity) {
                 idx->capacity *= 2;
                 idx->array = realloc(idx->array, sizeof(indexbook) * idx->capacity);
         }
-        idx->array[idx->count].key = key;
-        idx->array[idx->count].offset = offset;
-        idx->array[idx->count].size = size;
+        
+        i = index_find(idx, key);
+        
+        if (i == idx->count) {
+               idx->array[i].key = key;
+                idx->array[i].offset = offset;
+                idx->array[i].size = size;
+                idx->count++;
+                return;
+        }
+        else if (i != -1) {
+                memmove(&idx->array[i + 1], /* destino */
+                        &idx->array[i],     /* origen */
+                        (idx->count - i) * sizeof(indexbook));
+        }
+
+        idx->array[i].key = key;
+        idx->array[i].offset = offset;
+        idx->array[i].size = size;
         idx->count++;
+        return;
 }
 
 void index_load(Index* idx, const char* filename) {
@@ -95,8 +113,10 @@ void index_print(Index* idx, FILE* db, int key, int pos) {
                         fprintf(stdout, "%i|%s|%s%s\n", rec->bookID, rec->isbn, rec->title, rec->printedBy);
                         free(rec);
                 }else{
-                        fprintf(stdout, "Record with bookId=%i does not exist", key);
+                        fprintf(stdout, "Error accesing .db file with Offset");
                 }
+        }else{
+                        fprintf(stdout, "Record with bookId=%i does not exist", key);
         }
 
         return;
