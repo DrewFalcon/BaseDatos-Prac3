@@ -76,8 +76,8 @@ int main(int argc, char** argv) {
                 /*TEMPORARY CHANGE IN INTERFACE*/
                 /*printf("> ");*/
 
-                fprintf(stdout, "exit");
-                /*fflush(stdout);*/
+                fprintf(stdout, "exit\n");
+                fflush(stdout);
 
 
                 char* line = read_line();
@@ -285,12 +285,12 @@ Status del(FILE* db, Index* index, DeletedList* deleted, char* arguments) {
 
         found_index = index_find(index, atoi(arguments));
         if (found_index <= -1) {
-                printf("Record with bookId=%i does not exist\n", bookID);
+                printf("Item with key %i does not exist\n", bookID);
                 return ERROR;
         } else {
                 deleted_insert(deleted, index->array[found_index].size, index->array[found_index].offset);
                 index_delete(index, bookID);
-                printf("Record with bookId=%i has been deleted\n", bookID);
+                printf("Record with BookID=%i has been deleted\n", bookID);
         }
 
         return OK;

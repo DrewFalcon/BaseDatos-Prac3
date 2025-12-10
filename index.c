@@ -1,4 +1,5 @@
 #include "index.h"
+#include <stdint.h>
 
 // Crea un índice vacío
 Index* index_create() {
@@ -15,30 +16,27 @@ void index_free(Index* idx) {
 }
 
 void index_insert(Index* idx, int key, long int offset, size_t size) {
-        int i = 0;
+        int i = 0, pos = 0;
         if (idx->count >= idx->capacity) {
                 idx->capacity *= 2;
                 idx->array = realloc(idx->array, sizeof(indexbook) * idx->capacity);
         }
         
-        i = index_find(idx, key);
         
-        if (i == idx->count) {
-               idx->array[i].key = key;
-                idx->array[i].offset = offset;
-                idx->array[i].size = size;
-                idx->count++;
-                return;
+        while (pos < idx->count && idx->array[pos].key < key )
+                pos++;
+        
+        if (pos < idx->count)
+        {
+               memmove(&idx->array[pos + 1], /* destino */
+                        &idx->array[pos],     /* origen */
+                        (idx->count - pos) * sizeof(indexbook));
         }
-        else if (i != -1) {
-                memmove(&idx->array[i + 1], /* destino */
-                        &idx->array[i],     /* origen */
-                        (idx->count - i) * sizeof(indexbook));
-        }
+        
 
-        idx->array[i].key = key;
-        idx->array[i].offset = offset;
-        idx->array[i].size = size;
+        idx->array[pos].key = key;
+        idx->array[pos].offset = offset;
+        idx->array[pos].size = size;
         idx->count++;
         return;
 }
@@ -47,11 +45,39 @@ void index_load(Index* idx, const char* filename) {
         FILE* f = fopen(filename, "rb");
         if (!f) return;
 
-        fread(&idx->count, sizeof(int), 1, f);
-        idx->capacity = idx->count > 0 ? idx->count : 10;
+        /* Determine file size and derive number of entries.
+           The control files use a 20-byte-per-entry layout (4B key,
+           4B offset_lo, 4B offset_hi, 4B size, 4B padding) and no
+           initial count. */
+        fseek(f, 0, SEEK_END);
+        long fsize = ftell(f);
+        fseek(f, 0, SEEK_SET);
+
+        if (fsize <= 0) {
+                fclose(f);
+                return;
+        }
+
+        int entry_size = 20; /* bytes per entry in control format */
+        int nentries = (int)(fsize / entry_size);
+
+        idx->count = 0;
+        idx->capacity = nentries > 0 ? nentries : 10;
         idx->array = realloc(idx->array, sizeof(indexbook) * idx->capacity);
 
-        fread(idx->array, sizeof(indexbook), idx->count, f);
+        for (int i = 0; i < nentries; i++) {
+                uint32_t key32, off_lo, off_hi, size32, pad;
+                if (fread(&key32, sizeof(uint32_t), 1, f) != 1) break;
+                if (fread(&off_lo, sizeof(uint32_t), 1, f) != 1) break;
+                if (fread(&off_hi, sizeof(uint32_t), 1, f) != 1) break;
+                if (fread(&size32, sizeof(uint32_t), 1, f) != 1) break;
+                if (fread(&pad, sizeof(uint32_t), 1, f) != 1) break;
+
+                idx->array[i].key = (int)key32;
+                idx->array[i].offset = ((long int)off_hi << 32) | (long int)off_lo;
+                idx->array[i].size = (size_t)size32;
+                idx->count++;
+        }
 
         fclose(f);
 }
@@ -60,8 +86,27 @@ void index_save(Index* idx, const char* filename) {
         FILE* f = fopen(filename, "wb");
         if (!f) return;
 
-        fwrite(&idx->count, sizeof(int), 1, f);
+        /*fwrite(&idx->count, sizeof(int), 1, f);
         fwrite(idx->array, sizeof(indexbook), idx->count, f);
+
+         Write entries in the deterministic control format: for each
+           entry write 5 uint32_t words: key, offset_lo, offset_hi, size, pad(0).
+           This produces the exact binary layout used by the reference
+           control files in this repo. */
+        for (int i = 0; i < idx->count; i++) {
+                uint32_t key32 = (uint32_t)idx->array[i].key;
+                uint64_t off64 = (uint64_t)idx->array[i].offset;
+                uint32_t off_lo = (uint32_t)(off64 & 0xFFFFFFFFu);
+                uint32_t off_hi = (uint32_t)((off64 >> 32) & 0xFFFFFFFFu);
+                uint32_t size32 = (uint32_t)idx->array[i].size;
+                uint32_t pad = 0;
+
+                fwrite(&key32, sizeof(uint32_t), 1, f);
+                fwrite(&off_lo, sizeof(uint32_t), 1, f);
+                fwrite(&off_hi, sizeof(uint32_t), 1, f);
+                fwrite(&size32, sizeof(uint32_t), 1, f);
+                fwrite(&pad, sizeof(uint32_t), 1, f);
+        }
 
         fclose(f);
 }
@@ -116,7 +161,7 @@ void index_print(Index* idx, FILE* db, int key, int pos) {
                         fprintf(stdout, "Error accesing .db file with Offset");
                 }
         }else{
-                        fprintf(stdout, "Record with bookId=%i does not exist", key);
+                        fprintf(stdout, "Record with bookId=%i does not exist\n", key);
         }
 
         return;
