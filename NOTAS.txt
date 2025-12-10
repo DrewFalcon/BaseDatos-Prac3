@@ -1,0 +1,179 @@
+   
+andres@TheLaptop:/mnt/c/Users/andre/OneDrive/Documentos/tareas/2do de carrera/Bases de Datos/PRACTICA 3/BaseDatos-Prac3$ expect ./tests/add_data_test.sh 
+spawn rm -f test.db test.ind
+spawn ././library first_fit test
+Type command and argument/s.
+exit
+add 12345|978-2-12345680-3|El Quijote|Catedra
+Record with BookID=12345 has been added to the database
+exit
+add 12346|978-2-12345086-3|La busca|Catedra
+Record with BookID=12346 has been added to the database
+exit
+add 12347|978-2-12345680-4|el quijote|catedra
+Record with BookID=12347 has been added to the database
+exit
+add 12348|978-2-12345086-3|la busca|catedra
+Record with BookID=12348 has been added to the database
+exit
+printInd
+Entry #0
+    key: #12345
+    offset: #0
+    size: #38
+Entry #1
+    key: #12346
+    offset: #46
+    size: #36
+Entry #2
+    key: #12347
+    offset: #90
+    size: #38
+Entry #3
+    key: #12348
+    offset: #136
+    size: #36
+exit
+1) Four adds OK, ;-)
+2) file test.db Exists, ;-)
+3) files differ, :-(
+4) Script end
+andres@TheLaptop:/mnt/c/Users/andre/OneDrive/Documentos/tareas/2do de carrera/Bases de Datos/PRACTICA 3/BaseDatos-Prac3$ hexdump -C test.ind
+00000000  39 30 00 00 00 00 00 00  00 00 00 00 26 00 00 00  |90..........&...|
+00000010  00 00 00 00 3a 30 00 00  2e 00 00 00 00 00 00 00  |....:0..........|
+00000020  24 00 00 00 00 00 00 00  3b 30 00 00 5a 00 00 00  |$.......;0..Z...|
+00000030  00 00 00 00 26 00 00 00  00 00 00 00 3c 30 00 00  |....&.......<0..|
+00000040  88 00 00 00 00 00 00 00  24 00 00 00 00 00 00 00  |........$.......|
+00000050
+andres@TheLaptop:/mnt/c/Users/andre/OneDrive/Documentos/tareas/2do de carrera/Bases de Datos/PRACTICA 3/BaseDatos-Prac3$ hexdump -C test_control.db
+00000000  26 00 00 00 00 00 00 00  39 30 00 00 39 37 38 2d  |&.......90..978-|
+00000010  32 2d 31 32 33 34 35 36  38 30 2d 33 45 6c 20 51  |2-12345680-3El Q|
+00000020  75 69 6a 6f 74 65 7c 43  61 74 65 64 72 61 24 00  |uijote|Catedra$.|
+00000030  00 00 00 00 00 00 3a 30  00 00 39 37 38 2d 32 2d  |......:0..978-2-|
+00000040  31 32 33 34 35 30 38 36  2d 33 4c 61 20 62 75 73  |12345086-3La bus|
+00000050  63 61 7c 43 61 74 65 64  72 61 26 00 00 00 00 00  |ca|Catedra&.....|
+00000060  00 00 3b 30 00 00 39 37  38 2d 32 2d 31 32 33 34  |..;0..978-2-1234|
+00000070  35 36 38 30 2d 34 65 6c  20 71 75 69 6a 6f 74 65  |5680-4el quijote|
+00000080  7c 63 61 74 65 64 72 61  24 00 00 00 00 00 00 00  ||catedra$.......|
+00000090  3c 30 00 00 39 37 38 2d  32 2d 31 32 33 34 35 30  |<0..978-2-123450|
+000000a0  38 36 2d 33 6c 61 20 62  75 73 63 61 7c 63 61 74  |86-3la busca|cat|
+000000b0  65 64 72 61                                       |edra|
+000000b4
+andres@TheLaptop:/mnt/c/Users/andre/OneDrive/Documentos/tareas/2do de carrera/Bases de Datos/PRACTICA 3/BaseDatos-Prac3$
+
+
+LO DE ARRIBA FUE CON LA NUEVA IMPLEMENTACION DE index_save:
+
+void index_save(Index* idx, const char* filename) {
+        FILE* f = fopen(filename, "wb");
+        if (!f) return;
+
+        /*fwrite(&idx->count, sizeof(int), 1, f);
+        fwrite(idx->array, sizeof(indexbook), idx->count, f);
+
+         Write entries in the deterministic control format: for each
+           entry write 5 uint32_t words: key, offset_lo, offset_hi, size, pad(0).
+           This produces the exact binary layout used by the reference
+           control files in this repo. */
+        for (int i = 0; i < idx->count; i++) {
+                uint32_t key32 = (uint32_t)idx->array[i].key;
+                uint64_t off64 = (uint64_t)idx->array[i].offset;
+                uint32_t off_lo = (uint32_t)(off64 & 0xFFFFFFFFu);
+                uint32_t off_hi = (uint32_t)((off64 >> 32) & 0xFFFFFFFFu);
+                uint32_t size32 = (uint32_t)idx->array[i].size;
+                uint32_t pad = 0;
+
+                fwrite(&key32, sizeof(uint32_t), 1, f);
+                fwrite(&off_lo, sizeof(uint32_t), 1, f);
+                fwrite(&off_hi, sizeof(uint32_t), 1, f);
+                fwrite(&size32, sizeof(uint32_t), 1, f);
+                fwrite(&pad, sizeof(uint32_t), 1, f);
+        }
+
+        fclose(f);
+}
+
+AHORA A PROBAR CON LA VIEJA IMPLEMENTACION DE index_save QUE ES:
+void index_save(Index* idx, const char* filename) {
+        FILE* f = fopen(filename, "wb");
+        if (!f) return;
+
+        /*fwrite(&idx->count, sizeof(int), 1, f);
+        fwrite(idx->array, sizeof(indexbook), idx->count, f);
+
+        fclose(f);
+}
+=>
+
+
+andres@TheLaptop:/mnt/c/Users/andre/OneDrive/Documentos/tareas/2do de carrera/Bases de Datos/PRACTICA 3/BaseDatos-Prac3$ make
+gcc -Wall -Wextra -g -c index.c -o index.o
+gcc -Wall -Wextra -g -o library main.o index.o deleted.o record.o utils.o
+andres@TheLaptop:/mnt/c/Users/andre/OneDrive/Documentos/tareas/2do de carrera/Bases de Datos/PRACTICA 3/BaseDatos-Prac3$ expect ./tests/add_data_test.sh
+spawn rm -f test.db test.ind
+spawn ././library first_fit test
+Type command and argument/s.
+exit
+add 12345|978-2-12345680-3|El Quijote|Catedra
+Record with BookID=12345 has been added to the database
+exit
+add 12346|978-2-12345086-3|La busca|Catedra
+Record with BookID=12346 has been added to the database
+exit
+add 12347|978-2-12345680-4|el quijote|catedra
+Record with BookID=12347 has been added to the database
+exit
+add 12348|978-2-12345086-3|la busca|catedra
+Record with BookID=12348 has been added to the database
+exit
+printInd
+Entry #0
+    key: #12345
+    offset: #0
+    size: #38
+Entry #1
+    key: #12346
+    offset: #46
+    size: #36
+Entry #2
+    key: #12347
+    offset: #90
+    size: #38
+Entry #3
+    key: #12348
+    offset: #136
+    size: #36
+exit
+1) Four adds OK, ;-)
+2) file test.db Exists, ;-)
+3) files differ, :-(
+4) Script end
+andres@TheLaptop:/mnt/c/Users/andre/OneDrive/Documentos/tareas/2do de carrera/Bases de Datos/PRACTICA 3/BaseDatos-Prac3$ hexdump -C test_control.db
+00000000  26 00 00 00 00 00 00 00  39 30 00 00 39 37 38 2d  |&.......90..978-|
+00000010  32 2d 31 32 33 34 35 36  38 30 2d 33 45 6c 20 51  |2-12345680-3El Q|
+00000020  75 69 6a 6f 74 65 7c 43  61 74 65 64 72 61 24 00  |uijote|Catedra$.|
+00000030  00 00 00 00 00 00 3a 30  00 00 39 37 38 2d 32 2d  |......:0..978-2-|
+00000040  31 32 33 34 35 30 38 36  2d 33 4c 61 20 62 75 73  |12345086-3La bus|
+00000050  63 61 7c 43 61 74 65 64  72 61 26 00 00 00 00 00  |ca|Catedra&.....|
+00000060  00 00 3b 30 00 00 39 37  38 2d 32 2d 31 32 33 34  |..;0..978-2-1234|
+00000070  35 36 38 30 2d 34 65 6c  20 71 75 69 6a 6f 74 65  |5680-4el quijote|
+00000080  7c 63 61 74 65 64 72 61  24 00 00 00 00 00 00 00  ||catedra$.......|
+00000090  3c 30 00 00 39 37 38 2d  32 2d 31 32 33 34 35 30  |<0..978-2-123450|
+000000a0  38 36 2d 33 6c 61 20 62  75 73 63 61 7c 63 61 74  |86-3la busca|cat|
+000000b0  65 64 72 61                                       |edra|
+000000b4
+andres@TheLaptop:/mnt/c/Users/andre/OneDrive/Documentos/tareas/2do de carrera/Bases de Datos/PRACTICA 3/BaseDatos-Prac3$ hexdump -C test.db
+00000000  26 00 00 00 00 00 00 00  39 30 00 00 39 37 38 2d  |&.......90..978-|
+00000010  32 2d 31 32 33 34 35 36  38 30 2d 33 45 6c 20 51  |2-12345680-3El Q|
+00000020  75 69 6a 6f 74 65 7c 43  61 74 65 64 72 61 24 00  |uijote|Catedra$.|
+00000030  00 00 00 00 00 00 3a 30  00 00 39 37 38 2d 32 2d  |......:0..978-2-|
+00000040  31 32 33 34 35 30 38 36  2d 33 4c 61 20 62 75 73  |12345086-3La bus|
+00000050  63 61 7c 43 61 74 65 64  72 61 26 00 00 00 00 00  |ca|Catedra&.....|
+00000060  00 00 3b 30 00 00 39 37  38 2d 32 2d 31 32 33 34  |..;0..978-2-1234|
+00000070  35 36 38 30 2d 34 65 6c  20 71 75 69 6a 6f 74 65  |5680-4el quijote|
+00000080  7c 63 61 74 65 64 72 61  24 00 00 00 00 00 00 00  ||catedra$.......|
+00000090  3c 30 00 00 39 37 38 2d  32 2d 31 32 33 34 35 30  |<0..978-2-123450|
+000000a0  38 36 2d 33 6c 61 20 62  75 73 63 61 7c 63 61 74  |86-3la busca|cat|
+000000b0  65 64 72 61                                       |edra|
+000000b4
+andres@TheLaptop:/mnt/c/Users/andre/OneDrive/Documentos/tareas/2do de carrera/Bases de Datos/PRACTICA 3/BaseDatos-Prac3$

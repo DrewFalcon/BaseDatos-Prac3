@@ -16,7 +16,7 @@ void index_free(Index* idx) {
 }
 
 void index_insert(Index* idx, int key, long int offset, size_t size) {
-        int i = 0, pos = 0;
+        int pos = 0;
         if (idx->count >= idx->capacity) {
                 idx->capacity *= 2;
                 idx->array = realloc(idx->array, sizeof(indexbook) * idx->capacity);
@@ -86,13 +86,13 @@ void index_save(Index* idx, const char* filename) {
         FILE* f = fopen(filename, "wb");
         if (!f) return;
 
-        /*fwrite(&idx->count, sizeof(int), 1, f);
+        fwrite(&idx->count, sizeof(int), 1, f);
         fwrite(idx->array, sizeof(indexbook), idx->count, f);
 
-         Write entries in the deterministic control format: for each
+         /*Write entries in the deterministic control format: for each
            entry write 5 uint32_t words: key, offset_lo, offset_hi, size, pad(0).
            This produces the exact binary layout used by the reference
-           control files in this repo. */
+           control files in this repo. 
         for (int i = 0; i < idx->count; i++) {
                 uint32_t key32 = (uint32_t)idx->array[i].key;
                 uint64_t off64 = (uint64_t)idx->array[i].offset;
@@ -106,7 +106,7 @@ void index_save(Index* idx, const char* filename) {
                 fwrite(&off_hi, sizeof(uint32_t), 1, f);
                 fwrite(&size32, sizeof(uint32_t), 1, f);
                 fwrite(&pad, sizeof(uint32_t), 1, f);
-        }
+        }*/
 
         fclose(f);
 }
