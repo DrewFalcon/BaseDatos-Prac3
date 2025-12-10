@@ -57,8 +57,8 @@ puts  "1) Four adds OK, ;-)"
 
 if {[file exists [file join $filename.db]]} {
     puts "2) file $filename.db Exists, ;-)"
-} else {
-    puts "2) file $filename.db NOT found, :-("
+
+    puts "  2.5) file ${filename}_control.db NOT found, :-("
 }
 
 # call diff program
