@@ -13,4 +13,4 @@ clean:
 	rm -f *.o library
 
 run:
-	./library bestfit test
+	./library best_fit test
