@@ -185,9 +185,9 @@ if {[file exists [file join $filename.ind]]} {
 #}
 ## call diff program for list
 set output "differ"
-try {
-set output [exec diff -s $filename.lst ${filename}_control_del_03.lst]
-} trap CHILDSTATUS {} {}
+set output ""
+catch { set output [exec diff -s $filename.db ${filename}_control.db] }
+
 if {[regexp -nocase "identical" $output] || [regexp -nocase "idénticos" $output]} {
     puts "3) delete books files are identical, ;-)"
 } else {

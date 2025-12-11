@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "utils.h"
+
 // Estrategias
 #define BESTFIT 0
 #define WORSTFIT 1
@@ -26,6 +28,7 @@ typedef struct {
 // Funciones mínimas
 DeletedList* deleted_create(int strategy);
 void deleted_free(DeletedList* lst);
+Status sort_deleted(DeletedList* lst);
 void deleted_insert(DeletedList* lst, size_t size, long int offset);
 long int deleted_find_fit(DeletedList* lst, size_t size);
 void deleted_load(DeletedList* lst, const char* filename);

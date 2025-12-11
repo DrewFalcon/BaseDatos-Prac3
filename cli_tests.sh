@@ -18,9 +18,9 @@ set programName "library"
 set output "init"
 
 # no arguments
-try {
-set output [exec ./$programName]
-} trap CHILDSTATUS {} {}
+set output ""
+catch { set output [exec ./$programName] }
+
 if {[regexp -nocase $noArguments $output]} {
     puts "1) Command line error handling: No arguments ;-)"
 } else {
@@ -28,9 +28,9 @@ if {[regexp -nocase $noArguments $output]} {
 }
 
 # no valid search strategy
-try {
-set output [exec ./$programName unknown_search_strategy tests]
-} trap CHILDSTATUS {} {}
+set output ""
+catch { set output [exec ./$programName unknown_search_strategy tests] }
+
 if {[regexp -nocase $wrongStrategy $output]} {
     puts "2) Command line error handling: Bad strategy ;-)"
 } else {

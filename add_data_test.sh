@@ -57,15 +57,15 @@ puts  "1) Four adds OK, ;-)"
 
 if {[file exists [file join $filename.db]]} {
     puts "2) file $filename.db Exists, ;-)"
-
-    puts "  2.5) file ${filename}_control.db NOT found, :-("
+} else {
+    puts "2) file $filename.db NOT found, :-("
 }
 
 # call diff program
 set output "differ"
-try {
-set output [exec diff -s $filename.db ${filename}_control.db]
-} trap CHILDSTATUS {} {}
+set output ""
+catch { set output [exec diff -s $filename.db ${filename}_control.db] }
+
 if {[regexp -nocase "identical" $output] || [regexp -nocase "idénticos" $output]} {
     puts "3) control and created files with booksare identical, ;-)"
 } else {

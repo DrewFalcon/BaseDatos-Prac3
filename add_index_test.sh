@@ -66,9 +66,9 @@ if {[file exists [file join $filename.ind]]} {
 
 # call diff program
 set output "differ"
-try {
-set output [exec diff -s $filename.ind ${filename}_control.ind]
-} trap CHILDSTATUS {} {}
+set output ""
+catch { set output [exec diff -s $filename.db ${filename}_control.db] }
+
 if {[regexp -nocase "identical" $output] || [regexp -nocase "idénticos" $output]} {
     puts "3) control and created files with index are identical, ;-)"
 } else {
