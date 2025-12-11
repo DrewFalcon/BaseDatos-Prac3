@@ -1,6 +1,8 @@
 # BaseDatos-Prac3
 Para la pracitca 3 de Bases de Datos. Nosotros podemos rahhhhhh :3
 
+ENLACE: https://docs.google.com/document/d/19-JRk4doEipJwiYOC3fbIaDrQCrc34H16pSH59FunBs/edit?usp=sharing 
+
 
 Notas:
 
