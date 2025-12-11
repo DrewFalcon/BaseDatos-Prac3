@@ -30,9 +30,14 @@ int main(int argc, char** argv) {
         FILE* db = NULL;
 
         /* Argument checking */
+        if (argc < 2) {
+                printf("Missing argument\n");
+                return 0;  // El test exige return 0
+        }
+
         if (argc < 3) {
-                printf("Usage: %s <best_fit|first_fit|worst_fit> <basename>\n", argv[0]);
-                return -1;
+                printf("Missing argument\n");
+                return 0;
         }
 
         if (strcmp(argv[1], "best_fit") == 0)
@@ -43,7 +48,7 @@ int main(int argc, char** argv) {
                 strategy = WORSTFIT;
         else {
                 printf("Unknown search strategy %s\n", argv[1]);
-                return -1;
+                return 0;
         }
 
         root_name = argv[2];
@@ -54,6 +59,7 @@ int main(int argc, char** argv) {
         sprintf(lst_filename, "%s.lst", root_name);
 
         /* Open DB file (correct way) */
+        /* Open DB file (correct way) */
         db = fopen(db_filename, "r+b");
         if (!db) db = fopen(db_filename, "w+b");
         if (!db) {
@@ -61,12 +67,26 @@ int main(int argc, char** argv) {
                 return -1;
         }
 
-        /* Load index and deleted list */
-        index = index_create();
-        index_load(index, ind_filename);
+        /* Comprobar tamaño del fichero .db */
+        long db_size = 0;
+        if (fseek(db, 0, SEEK_END) == 0) {
+                db_size = ftell(db);
+                if (db_size < 0) db_size = 0;
+                fseek(db, 0, SEEK_SET);
+        }
 
+        /* Crear estructuras en memoria */
+        index = index_create();
         deleted = deleted_create(strategy);
-        deleted_load(deleted, lst_filename);
+
+        /* Solo cargamos índice y lista de borrados si el .db NO está vacío */
+        if (db_size > 0) {
+                index_load(index, ind_filename);
+                deleted_load(deleted, lst_filename);
+                /* opcional: asegurarnos de que la lista de borrados está bien ordenada
+                   según la estrategia */
+                sort_deleted(deleted);
+        }
 
         /*TEMPORARY CHANGE IN INTERFACE*/
         /*printf("Library ready. Enter commands:\n");*/
@@ -78,7 +98,6 @@ int main(int argc, char** argv) {
 
                 fprintf(stdout, "exit\n");
                 fflush(stdout);
-
 
                 char* line = read_line();
                 if (!line) break;
@@ -98,42 +117,42 @@ int main(int argc, char** argv) {
 
                 if (strcmp(cmd, "add") == 0) {
                         add(db, index, deleted, args);
-                        //printf("exit\n");
+                        // printf("exit\n");
                         free(line);
                         continue;
                 }
 
                 if (strcmp(cmd, "find") == 0) {
                         find(db, index, args);
-                        //printf("exit\n");
+                        // printf("exit\n");
                         free(line);
                         continue;
                 }
 
                 if (strcmp(cmd, "del") == 0) {
                         del(db, index, deleted, args);
-                        //printf("exit\n");
+                        // printf("exit\n");
                         free(line);
                         continue;
                 }
 
                 if (strcmp(cmd, "printRec") == 0) {
                         printRec(index, db);
-                        //printf("exit\n");
+                        // printf("exit\n");
                         free(line);
                         continue;
                 }
 
                 if (strcmp(cmd, "printInd") == 0) {
                         printInd(index);
-                        //printf("exit\n");
+                        // printf("exit\n");
                         free(line);
                         continue;
                 }
 
                 if (strcmp(cmd, "printLst") == 0) {
                         printLst(deleted);
-                        //free(line);
+                        // free(line);
                         continue;
                 }
 
@@ -149,6 +168,8 @@ int main(int argc, char** argv) {
         deleted_free(deleted);
         fclose(db);
 
+        printf("all done\n");
+        fflush(stdout);
         return 0;
 }
 
@@ -335,7 +356,7 @@ Status printLst(DeletedList* lst) {
         }
 
         for (i = 0; i < lst->count; i++) {
-                printf("Entry #%i\n", i );
+                printf("Entry #%i\n", i);
                 printf("    offset: #%ld\n", lst->array[i].offset);
                 printf("    size: #%zu\n", lst->array[i].size);
         }
