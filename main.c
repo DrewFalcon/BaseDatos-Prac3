@@ -31,8 +31,9 @@ int main(int argc, char** argv) {
 
         /* Argument checking */
         if (argc < 3) {
-                printf("Usage: %s <best_fit|first_fit|worst_fit> <basename>\n", argv[0]);
-                return -1;
+                /*printf("Usage: %s <best_fit|first_fit|worst_fit> <basename>\n", argv[0]);*/
+                printf("Missing argument\n");
+                return 0;  // El test exige return 0
         }
 
         if (strcmp(argv[1], "best_fit") == 0)
@@ -43,7 +44,8 @@ int main(int argc, char** argv) {
                 strategy = WORSTFIT;
         else {
                 printf("Unknown search strategy %s\n", argv[1]);
-                return -1;
+                /*printf("Unknown search strategy\ny");*/
+                return 0;
         }
 
         root_name = argv[2];
